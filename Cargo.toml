@@ -1,0 +1,12 @@
+[package]
+name = "tui-toolkit"
+version = "0.1.0"
+edition = "2021"
+authors = ["Lut99"]
+description = "A small (and never beyond that) library that contains some widgets and other gadgets for working with TUIs in Rust."
+repository = "https://github.com/Lut99/tui-toolkit-rs"
+license = "Apache-2.0"
+
+
+[dependencies]
+ratatui = "0.29.0"
