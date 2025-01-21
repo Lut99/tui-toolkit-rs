@@ -4,7 +4,7 @@
 //  Created:
 //    21 Jan 2025, 20:26:24
 //  Last edited:
-//    21 Jan 2025, 20:56:42
+//    21 Jan 2025, 21:03:03
 //  Auto updated?
 //    Yes
 //
@@ -63,10 +63,12 @@ pub type ScrollState = StatefulScrollState<()>;
 /// The state that is adapted such that the [`ScrollArea`] scrolls.
 ///
 /// This version assumes that the nested widget is stateful.
-#[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct StatefulScrollState<S> {
     /// The coordinates that offset the scroll area (as an x x y pair).
     pos:   (u16, u16),
+    /// A buffer for caching purposes.
+    cache: Buffer,
     /// The nested state to pass to the ScrollArea.
     state: S,
 }
@@ -74,7 +76,7 @@ pub struct StatefulScrollState<S> {
 // Constructors
 impl<S: Default> Default for StatefulScrollState<S> {
     #[inline]
-    fn default() -> Self { Self { pos: (0, 0), state: Default::default() } }
+    fn default() -> Self { Self { pos: (0, 0), cache: Buffer::empty(Rect::ZERO), state: Default::default() } }
 }
 impl<S> StatefulScrollState<S> {
     /// Constructs a new StatefulScrollState.
@@ -85,7 +87,7 @@ impl<S> StatefulScrollState<S> {
     /// # Returns
     /// A new StatefulScrollState ready for keeping track of scroll states.
     #[inline]
-    pub const fn new(state: S) -> Self { Self { pos: (0, 0), state } }
+    pub fn new(state: S) -> Self { Self { pos: (0, 0), cache: Buffer::empty(Rect::ZERO), state } }
 }
 
 // Scrolling
@@ -248,11 +250,12 @@ impl<W: Widget> StatefulWidget for ScrollArea<W> {
     fn render(self, outer: Rect, outer_buf: &mut Buffer, state: &mut Self::State) {
         // Render the given widget to a buffer the size of the inner area first.
         let inner: Rect = Rect::new(0, 0, self.inner.0, self.inner.1);
-        let mut inner_buf = Buffer::empty(inner);
-        self.widget.render(inner, &mut inner_buf);
+        state.cache.resize(inner);
+        state.cache.reset();
+        self.widget.render(inner, &mut state.cache);
 
         // Run the math
-        scroll(state.pos, outer, inner, &inner_buf, outer_buf);
+        scroll(state.pos, outer, inner, &state.cache, outer_buf);
     }
 }
 
@@ -292,10 +295,11 @@ impl<W: StatefulWidget> StatefulWidget for StatefulScrollArea<W> {
     fn render(self, outer: Rect, outer_buf: &mut Buffer, state: &mut Self::State) {
         // Render the given widget to a buffer the size of the inner area first.
         let inner: Rect = Rect::new(0, 0, self.inner.0, self.inner.1);
-        let mut inner_buf = Buffer::empty(inner);
-        self.widget.render(inner, &mut inner_buf, &mut state.state);
+        state.cache.resize(inner);
+        state.cache.reset();
+        self.widget.render(inner, &mut state.cache, &mut state.state);
 
         // Run the math
-        scroll(state.pos, outer, inner, &inner_buf, outer_buf);
+        scroll(state.pos, outer, inner, &state.cache, outer_buf);
     }
 }
